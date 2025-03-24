@@ -4,6 +4,7 @@ use utils::*;
 
 use std::path::PathBuf;
 use std::fs::write;
+use std::process::exit;
 use clap::{Parser, Subcommand,};
 use toml_edit::{value};
 use git2::{Repository, StatusOptions};
@@ -37,7 +38,7 @@ struct Cli {
 
     /// Message when adding the tag to git
     #[arg(short, long)]
-    tag_message: String,
+    tag_message: Option<String>,
 
     /// git remote name to push new commits to. Defaults to 'origin' if not set
     #[arg(short, long)]
@@ -64,7 +65,7 @@ enum VersionChangeType {
         // #[arg(short, long)]
         vtype: IncrementVersionPart,
     },
-    /// Only show versions from cargo and git
+    /// Only show versions from cargo and git and exit afterward.
     OnlyShow
 }
 
@@ -82,7 +83,6 @@ fn main() {
     if !path.is_dir() { print_error(format!("Path is not a directory ({})", path.display())); }
 
     if cli.verbose > 0 { println!("Using path: {}", path.display()); }
-
 
     // ***
     let txt = String::from("Analysing cargo project");
@@ -109,6 +109,34 @@ fn main() {
     if repo.is_bare() {
         print_error("Cannot use bare repository".to_string());
     }
+
+    if let VersionChangeType::OnlyShow = &cli.change_type {
+        let cargo_content = read_version_tomls(&cargo_tomls);
+        println!("{INDENT}Cargo.toml file with version:");
+        cargo_content.iter().for_each(|(fname, (version, _))| {
+            println!("{INDENT} - {}: {}", fname.display(), version);
+        });
+
+        let git_tag_prefix = cli.git_prefix_for_tag.unwrap_or("v".to_string());
+        let tns = repo.tag_names(Some(format!("{git_tag_prefix}*").as_str())).unwrap()
+            .into_iter().filter_map(|ct| { match ct {
+            None => None,
+            Some(s) => Some(String::from(s))
+        } }).collect::<Vec<_>>();
+        let mut git_tag_strings = "".to_string();
+        tns.iter().enumerate().for_each(|(n, tn)| {
+            if (n&7) == 0 { git_tag_strings += format!("\n{INDENT}  ").as_str(); }
+            git_tag_strings += tn; git_tag_strings += ", ";
+        });
+        println!("{INDENT}Git tags wth prefix ('{}'):{}", git_tag_prefix, git_tag_strings);
+
+        println!("\n{INDENT}Show version finished.");
+        exit(0);
+    }
+
+    let tag_message = match cli.tag_message {
+        Some(s) => s, None => { print_error("No tag message found.".to_string()); }
+    };
 
     let mut git_remote = {
         let git_remote_name = match cli.remote {
@@ -260,7 +288,7 @@ fn main() {
     println!("[4/5] {} {} ...", TAG, txt);
 
     let obj = repo.revparse_single("HEAD").unwrap();
-    let r = repo.tag(git_tag_new_version_str.as_str(), &obj, &author, cli.tag_message.as_str(), false);
+    let r = repo.tag(git_tag_new_version_str.as_str(), &obj, &author, tag_message.as_str(), false);
     if let Err(e) = r {
         print_error(format!("Error adding git tag {}: {}", git_tag_new_version_str, e));
     }
