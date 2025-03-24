@@ -1,0 +1,18 @@
+[package]
+name = "cargo-git-version-setter"
+version = "0.1.14"
+edition = "2024"
+
+[[bin]]
+name = "cgvs"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5.32", features = ["derive", "string", "cargo", "color", "help"] }
+console = "0.15.11"
+indicatif = "0.17.11"
+toml_edit = "0.22.24"
+regex = "1.11.1"
+git2 = "0.20.1"
+pathdiff = "0.2.3"
+git2_credentials = "0.15.0"
