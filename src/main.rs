@@ -3,10 +3,8 @@ mod utils;
 use utils::*;
 
 use std::path::PathBuf;
-use std::{thread};
 use std::fs::write;
 use clap::{Parser, Subcommand,};
-use std::time::Duration;
 use toml_edit::{value};
 use git2::{Repository, StatusOptions};
 use git2_credentials::CredentialHandler;
@@ -181,7 +179,13 @@ fn main() {
     // ****************************************
     let mut opts = StatusOptions::new();
     opts.include_untracked(false);
-    let change_count = repo.statuses(None).unwrap().iter().count();
+    let mut so = StatusOptions::new();
+    so.include_untracked(false); so.exclude_submodules(true);
+    so.recurse_ignored_dirs(false);
+    // repo.statuses(Some(&mut so)).unwrap().iter().for_each(|x| {
+    //     println!("file: {:?} -> status: {:?}", x.path(), x.status())
+    // });
+    let change_count = repo.statuses(Some(&mut so)).unwrap().iter().count();
     if change_count > 0 {
         print_error(format!("There are {} uncommitted changes - please commit before continuing.", change_count));
     }
