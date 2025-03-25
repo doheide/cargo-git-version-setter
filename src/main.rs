@@ -1,12 +1,13 @@
 mod utils;
 
+use std::fs;
 use utils::*;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fs::write;
 use std::process::exit;
 use clap::{Parser, Subcommand,};
-use toml_edit::{value};
+use toml_edit::{value, DocumentMut};
 use git2::{Repository, StatusOptions};
 use git2_credentials::CredentialHandler;
 use pathdiff::diff_paths;
@@ -230,13 +231,52 @@ fn main() {
     }
 
     //
-    cargo_content.iter_mut().for_each(|(fname, (_, toml))| {
+    let cargo_locks: Vec<_> = cargo_content.iter_mut().filter_map(|(fname, (_, toml))| {
+        let cargo_prj_name = toml["package"]["name"].to_string();
         toml["package"]["version"] = value(new_version.to_string());
         // println!("file: {}\ntoml: {}", fname.display(), toml.to_string());
         if let Err(e) = write(fname, toml.to_string()) {
             print_error(format!("Failed to write to '{}': {}", fname.display(), e));
         }
-    });
+        if cli.verbose > 0 { println!("{INDENT}Updated cargo.toml: {}", fname.display()); }
+
+        // adjust version in lock file
+        let lock_file = fname.parent().unwrap();
+        let lock_file = lock_file.join(Path::new("Cargo.lock"));
+        if lock_file.exists() {
+            let cct_content = match fs::read(lock_file.clone()) {
+                Ok(content) => String::from_utf8(content).unwrap(),
+                Err(e) => { print_error(format!("Could not read lock file '{}': {:?}", lock_file.display(), e)); }
+            };
+            let mut toml_lock = match cct_content.parse::<DocumentMut>() {
+                Ok(v) => v, Err(e) => {
+                    print_error(format!("Could not parse toml from lock file '{}': {:?}", lock_file.display(), e)); }
+            };
+
+            if let Some(package_sections) = toml_lock["package"].as_array_of_tables_mut() {
+                let mut changed_lock = false;
+                package_sections.iter_mut().for_each(|cps| {
+                    if cps["name"].to_string() == cargo_prj_name {
+                        cps["version"] = value(new_version.to_string());
+                        changed_lock = true;
+                    }
+                });
+                if changed_lock {
+                    if let Err(e) = write(lock_file.clone(), toml_lock.to_string()) {
+                        print_error(format!("Failed to write to lock '{}': {}", lock_file.display(), e));
+                    }
+                    if cli.verbose > 0 { println!("{INDENT}  and respective cargo.lock: {}", lock_file.display()); }
+                    Some(lock_file)
+                }
+                else { None }
+            }
+            else {
+                print_warn( format!("Unexpected format in lock file content of {}", lock_file.display()));
+                None
+            }
+        }
+        else { None }
+    }).collect();
 
     println!("       {} {} done", CHECK, txt);
 
@@ -250,6 +290,11 @@ fn main() {
     let mut index = repo.index().unwrap();
     // suppose you made some change to "hello.txt", add it to the index
     cargo_content.keys().into_iter().for_each(|fname| {
+        let fname_repo_rel = diff_paths(fname.as_path(), git_base_path.as_path()).unwrap();
+        // println!("rel file to commit: {}", fname_repo_rel.display());
+        index.add_path(fname_repo_rel.as_path()).unwrap();
+    });
+    cargo_locks.iter().for_each(|fname| {
         let fname_repo_rel = diff_paths(fname.as_path(), git_base_path.as_path()).unwrap();
         // println!("rel file to commit: {}", fname_repo_rel.display());
         index.add_path(fname_repo_rel.as_path()).unwrap();
