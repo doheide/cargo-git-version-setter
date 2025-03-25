@@ -28,9 +28,9 @@ struct Cli {
     #[arg(short, long, default_value_t = false)]
     scan_subdirs: bool,
 
-    /// Do execute 'git push' and 'git push --tags'
-    #[arg(short, long, default_value_t = true)]
-    do_push: bool,
+    // /// Do execute 'git push' and 'git push --tags'
+    // #[arg(short, long, default_value_t = true)]
+    // do_push: bool,
 
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]

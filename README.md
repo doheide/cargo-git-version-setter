@@ -8,7 +8,7 @@ A command-line tool for updating versions in one or more `Cargo.toml` files, cre
 - Commit the changes automatically.
 - Supports version increments and fixed version setting.
 - Can scan subdirectories for `Cargo.toml` files.
-- Pushes changes and tags to a remote repository (optional).
+- Pushes changes and tags to a remote repository.
 
 ## Installation
 Ensure you have Rust and Cargo installed on your system. Then, install the tool using:
@@ -84,7 +84,6 @@ cgvs only-show
 - `-p, --path <PATH>` - Path of the project.
 - `-c, --cargo-file-selector <CARGO_FILE_SELECTOR>` - Select cargo file if multiple exist (`leaf`, `base`, or `all`).
 - `-s, --scan-subdirs` - Scan subdirectories for `Cargo.toml` files.
-- `-d, --do-push` - Execute `git push` and `git push --tags`.
 - `-v, --verbose` - Enable debugging output.
 - `-t, --tag-message <TAG_MESSAGE>` - Message when adding the tag to Git.
 - `-r, --remote <REMOTE>` - Git remote name to push new commits to (default: `origin`).
@@ -115,12 +114,6 @@ To show current versions without making changes:
 
 ```sh
 cgvs only-show
-```
-
-To update the version without committing:
-
-```sh
-cgvs fixed 2.0.0 --no-commit
 ```
 
 To scan subdirectories and apply changes:
