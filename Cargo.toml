@@ -1,6 +1,6 @@
 [package]
 name = "cargo-git-version-setter"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 keywords = ["version", "cargo", "git", "git_tag"]
