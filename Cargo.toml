@@ -2,6 +2,13 @@
 name = "cargo-git-version-setter"
 version = "0.1.1"
 edition = "2024"
+license = "MIT"
+keywords = ["version", "cargo", "git", "git_tag"]
+description = "Write version to one or multiple Cargo.toml in a project and create a git tag."
+readme = "README.md"
+homepage = "https://github.com/doheide/cargo-git-version-setter"
+repository = "https://github.com/doheide/cargo-git-version-setter"
+
 
 [[bin]]
 name = "cgvs"
